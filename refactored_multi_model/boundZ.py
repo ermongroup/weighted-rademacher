@@ -1,9 +1,103 @@
 from __future__ import division
 import numpy as np
 
-def lower_bound_Z(delta_bar, n, k, log_base, w_min=None, verbose=False):
+def lower_bound_Z(delta_bar, n, k, log_base, w_max=None, w_min=None, verbose=False):
     '''
     Lower bound the partition function
+
+    Inputs:
+    - delta_bar: float, our estimator of log_2(Z).  The mean of 
+        max_x{<c,x> + log_2 w(x)} over k randomly generated c vectors.
+    - n: int.  Our space is of size 2^n (vectors are in {-1,1}^n, maximum 
+        value of the partition function is w_max*2^n)
+    - k: int.  number of random c vectors used to compute delta_bar
+    - log_base: float.  We will return a lower bound on log(Z) using this base
+    - w_max: float, the largest weight.  If available we may be able to improve
+        the lower bound using it.
+    - w_min: float, the smallest non-zero weight.  If available we may be able to improve
+        the lower bound using it.
+    - verbose: bool, if true print info about which bound we use
+    Outputs:
+    - high_prob_LB: float, lower bound on log(Z) in the specified base that holds
+        with high probability.  
+    - expectation_LB: float, lower bound on log(Z) in the specified base that holds
+        in expecatation (if delta_bar was calculated as mean of infinite number of deltas)
+    '''
+    #want an estimator of log(Z) with base log_base, rescale delta
+
+################### Calculate high probability lower bound ###################
+    if w_min:
+        log_w_min = np.log(w_min)/np.log(2)      
+        lamda_min = (delta_bar - np.sqrt(6*n/k) - log_w_min)/(n*np.log(2))
+        if lamda_min <= 1.0: 
+            lower_bound_w_min = (delta_bar - np.sqrt(6*n/k) - log_w_min)**2/(2*n*np.log(2)) + log_w_min
+    if w_max:
+        log_w_max = np.log(w_max)/np.log(2)      
+        lamda_max = (delta_bar - np.sqrt(6*n/k) - log_w_max)/(n*np.log(2))
+        if lamda_max >= 1.0: 
+            lower_bound_w_max = (delta_bar - np.sqrt(6*n/k) - log_w_max)**2/(2*n*np.log(2)) + log_w_max
+
+    lower_bound_no_w = delta_bar - np.sqrt(6*n/k) - n*np.log(2)/2
+    if w_min and lamda_min <= 1.0:
+        #this should be true for lower bound using \Delta, but is it with this using \delta?
+        assert(lower_bound_w_min >= lower_bound_no_w) 
+        if verbose:
+            print "high probability LOWER BOUND CALCULATION: used w_min, bound =",  lower_bound_w_min
+            print "paramaters:"
+            print "delta_bar =", delta_bar
+            print "n =", n
+            print "k =", k
+            print "log_base =", log_base
+            print "w_min =", w_min
+            print "verbose =", verbose
+        high_prob_LB = lower_bound_w_min
+    elif w_max and lamda_max >= 1.0:
+        assert(lower_bound_w_max >= lower_bound_no_w) 
+        if verbose:
+            print "high probability LOWER BOUND CALCULATION: used w_mam, bound =",  lower_bound_w_max
+            print "paramaters:"
+            print "delta_bar =", delta_bar
+            print "n =", n
+            print "k =", k
+            print "log_base =", log_base
+            print "w_min =", w_min
+            print "verbose =", verbose
+        high_prob_LB = lower_bound_w_max       
+    else:
+        if verbose:
+            print "high probability LOWER BOUND CALCULATION: did not use w_min, bound =", lower_bound_no_w
+        high_prob_LB = lower_bound_no_w
+
+################### ln(2) NOT FIXED for expectation bounds
+################### Calculate lower bound that holds in expectation for comparison with gumbel ###################
+    if w_min:
+        log_w_min = np.log(w_min)/np.log(2)              
+        lamda = (delta_bar - log_w_min)/n
+        if lamda <= 1.0: 
+            lower_bound_w_min = (delta_bar - log_w_min)**2/(2*n) + log_w_min
+    lower_bound_no_w_min = delta_bar - n/2
+    if w_min and lamda <= 1.0:
+        #this should be true for lower bound using \Delta, but is it with this using \delta?
+        assert(lower_bound_w_min >= lower_bound_no_w_min) 
+        if verbose:
+            print "expectation LOWER BOUND CALCULATION: used w_min"
+        expectation_LB = lower_bound_w_min
+    else:
+        if verbose:
+            print "expectation LOWER BOUND CALCULATION: did not use w_min"
+        expectation_LB = lower_bound_no_w_min
+
+
+    rescaled_high_prob_LB = high_prob_LB*np.log(2)/np.log(log_base)
+    rescaled_expectation_LB = expectation_LB*np.log(2)/np.log(log_base)
+    return (rescaled_high_prob_LB, rescaled_expectation_LB)
+
+
+def lower_bound_Z_missingLog2(delta_bar, n, k, log_base, w_min=None, verbose=False):
+    '''
+    Lower bound the partition function
+    This version was used for AAAI camera ready submission, but is weak because
+    we are missing a factor of ln(2) multiplying the lambda^2 term
 
     Inputs:
     - delta_bar: float, our estimator of log_2(Z).  The mean of 
@@ -34,11 +128,18 @@ def lower_bound_Z(delta_bar, n, k, log_base, w_min=None, verbose=False):
         #this should be true for lower bound using \Delta, but is it with this using \delta?
         assert(lower_bound_w_min >= lower_bound_no_w_min) 
         if verbose:
-            print "high probability LOWER BOUND CALCULATION: used w_min"
+            print "high probability LOWER BOUND CALCULATION: used w_min, bound =",  lower_bound_w_min
+            print "paramaters:"
+            print "delta_bar =", delta_bar
+            print "n =", n
+            print "k =", k
+            print "log_base =", log_base
+            print "w_min =", w_min
+            print "verbose =", verbose
         high_prob_LB = lower_bound_w_min
     else:
         if verbose:
-            print "high probability LOWER BOUND CALCULATION: did not use w_min"
+            print "high probability LOWER BOUND CALCULATION: did not use w_min, bound =", lower_bound_no_w_min
         high_prob_LB = lower_bound_no_w_min
 
 ################### Calculate lower bound that holds in expectation for comparison with gumbel ###################
@@ -63,6 +164,7 @@ def lower_bound_Z(delta_bar, n, k, log_base, w_min=None, verbose=False):
     rescaled_high_prob_LB = high_prob_LB*np.log(2)/np.log(log_base)
     rescaled_expectation_LB = expectation_LB*np.log(2)/np.log(log_base)
     return (rescaled_high_prob_LB, rescaled_expectation_LB)
+
 
 
 def OLD_WRONG_LOG_BASE_upper_bound_Z(delta_bar, n, k, log_base=np.e, w_max=None, w_min=None, verbose=False, chunk_size=None):
@@ -388,7 +490,7 @@ def upper_bound_Z(delta_bar, n, k, log_base=np.e, w_max=None, w_min=None, verbos
         elif expectation_best_upper_bound == upper_bound_w_min:
             print "expectation UPPER BOUND CALCULATION: used w_min"
         else:
-            assert(expectation_best_upper_bound == upper_bound_no_weight)
+            assert(np.abs(expectation_best_upper_bound - upper_bound_no_weight) < .0001), (expectation_best_upper_bound, upper_bound_no_weight)
             print "expectation UPPER BOUND CALCULATION: did not use w_min or w_max"
 
     rescaled_high_prob_best_upper_bound = high_prob_best_upper_bound*np.log(2)/np.log(log_base)
