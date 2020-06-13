@@ -10,5 +10,5 @@ Paper: https://arxiv.org/abs/1801.09028 \
 Blog post: https://ermongroup.github.io/blog/rademacher/
 
 
-To reproduce Ising model experiments, see refactored_multi_model/ising_model.py.
+To reproduce Ising model experiments, see refactored_multi_model/ising_model.py.  
 To reproduce \# SAT experiments, see refactored_multi_model/sat_model.py.
